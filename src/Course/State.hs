@@ -202,4 +202,4 @@ isHappy ::
   Bool
 isHappy = contains 1 . firstRepeat . produce f
   where
-    f = toInteger . foldRight (\a b -> a * a + b) 0 . map digitToInt . show'
+    f = toInteger . sum . map (join (*) . digitToInt) . show'
