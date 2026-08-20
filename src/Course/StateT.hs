@@ -258,15 +258,13 @@ instance (Monad k) => Applicative (OptionalT k) where
   pure ::
     a ->
     OptionalT k a
-  pure =
-    error "todo: Course.StateT pure#instance (OptionalT k)"
+  pure = OptionalT . pure . pure
 
   (<*>) ::
     OptionalT k (a -> b) ->
     OptionalT k a ->
     OptionalT k b
-  (<*>) =
-    error "todo: Course.StateT (<*>)#instance (OptionalT k)"
+  (OptionalT f) <*> (OptionalT a) = OptionalT $ f >>= onFull (\f' -> a >>= onFull (pure . pure . f'))
 
 -- | Implement the `Monad` instance for `OptionalT k` given a Monad k.
 --
@@ -277,8 +275,7 @@ instance (Monad k) => Monad (OptionalT k) where
     (a -> OptionalT k b) ->
     OptionalT k a ->
     OptionalT k b
-  (=<<) =
-    error "todo: Course.StateT (=<<)#instance (OptionalT k)"
+  (=<<) f (OptionalT a) = OptionalT $ a >>= onFull f
 
 -- | A `Logger` is a pair of a list of log values (`[l]`) and an arbitrary value (`a`).
 data Logger l a
