@@ -275,7 +275,7 @@ instance (Monad k) => Monad (OptionalT k) where
     (a -> OptionalT k b) ->
     OptionalT k a ->
     OptionalT k b
-  (=<<) f (OptionalT a) = OptionalT $ a >>= onFull f
+  (=<<) f (OptionalT a) = OptionalT $ a >>= onFull (runOptionalT . f)
 
 -- | A `Logger` is a pair of a list of log values (`[l]`) and an arbitrary value (`a`).
 data Logger l a
@@ -291,8 +291,7 @@ instance Functor (Logger l) where
     (a -> b) ->
     Logger l a ->
     Logger l b
-  (<$>) =
-    error "todo: Course.StateT (<$>)#instance (Logger l)"
+  (<$>) f (Logger l a) = Logger l (f a)
 
 -- | Implement the `Applicative` instance for `Logger`.
 --
@@ -305,15 +304,13 @@ instance Applicative (Logger l) where
   pure ::
     a ->
     Logger l a
-  pure =
-    error "todo: Course.StateT pure#instance (Logger l)"
+  pure a = Logger (listh []) a
 
   (<*>) ::
     Logger l (a -> b) ->
     Logger l a ->
     Logger l b
-  (<*>) =
-    error "todo: Course.StateT (<*>)#instance (Logger l)"
+  (<*>) (Logger xs f) (Logger ys a) = Logger (xs ++ ys) (f a)
 
 -- | Implement the `Monad` instance for `Logger`.
 -- The `bind` implementation must append log values to maintain associativity.
@@ -325,8 +322,9 @@ instance Monad (Logger l) where
     (a -> Logger l b) ->
     Logger l a ->
     Logger l b
-  (=<<) =
-    error "todo: Course.StateT (=<<)#instance (Logger l)"
+  (=<<) f (Logger xs a) = Logger (xs ++ ys) b
+    where
+      (Logger ys b) = f a
 
 -- | A utility function for producing a `Logger` with one log value.
 --
@@ -336,8 +334,7 @@ log1 ::
   l ->
   a ->
   Logger l a
-log1 =
-  error "todo: Course.StateT#log1"
+log1 l a = Logger (listh [l]) a
 
 -- | Remove all duplicate integers from a list. Produce a log as you go.
 -- If there is an element above 100, then abort the entire computation and produce no result.
@@ -357,8 +354,13 @@ distinctG ::
   (Integral a, Show a) =>
   List a ->
   Logger Chars (Optional (List a))
-distinctG =
-  error "todo: Course.StateT#distinctG"
+distinctG xs = runOptionalT $ evalT (filtering f xs) S.empty
+  where
+    f x = StateT $ \s -> OptionalT $ g x s
+    g x s
+      | x > 100 = log1 (listh "aborting > 100: " ++ show' x) Empty
+      | P.even x = log1 (listh "even number: " ++ show' x) (Full (x `P.notElem` s, x `S.insert` s))
+      | otherwise = Logger (listh []) (Full (x `P.notElem` s, x `S.insert` s))
 
 onFull ::
   (Applicative k) =>
